@@ -72,6 +72,10 @@ namespace AD_GroupAdd
                     group.Save();
                 }
             }
+            catch (System.DirectoryServices.AccountManagement.NoMatchingPrincipalException e)
+            {
+                MessageBox.Show("cant find that user");
+            }
             catch (UnauthorizedAccessException e)
             {
                 MessageBox.Show(Properties.Resources.ErrorMsg,e.Message);
@@ -97,6 +101,10 @@ namespace AD_GroupAdd
                     group.Members.Remove(pc, IdentityType.SamAccountName, userId);
                     group.Save();
                 }
+            }
+            catch (System.DirectoryServices.AccountManagement.NoMatchingPrincipalException e)
+            {
+                MessageBox.Show("cant find that user");
             }
             catch (UnauthorizedAccessException e)
             {
