@@ -19,8 +19,8 @@ namespace AD_GroupAdd
         public Form1()
         {
             InitializeComponent();
-            MyDomain = Properties.Settings.Default.defaultDomain;                ;
-            timer1.Interval = 1000;
+            MyDomain = Properties.Settings.Default.defaultDomain;
+            timer1.Interval = 5000;
             
         }
 
@@ -34,21 +34,36 @@ namespace AD_GroupAdd
 
             if (e.KeyCode == Keys.Enter)
             {
-                if (GroupExists(this.MyDomain, comboBox1.Text))
+                if (setGroup(comboBox1.Text))
                 {
-                    this.MyGroupName = comboBox1.Text;
-                    txtUserName.Focus();
                     e.Handled = true;
                     e.SuppressKeyPress = true;
                 }
             }
         }
+        private void comboBox1_Leave(object sender, EventArgs e)
+        {
+            setGroup(comboBox1.Text);
+        }
+
+        private bool setGroup(string grp)
+        {
+            if (GroupExists(this.MyDomain, grp))
+            {
+                this.MyGroupName = grp;
+                Properties.Settings.Default.defaultADGroup = grp;
+                Properties.Settings.Default.Save();
+                this.toolStripStatusLabel1.Text = String.Format("Current Group: {0}", this.MyGroupName);
+                return true;
+            }
+            return false;
+        }
 
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            this.MyGroupName = Properties.Settings.Default.defaultADGroup;
-            comboBox1.Text= Properties.Settings.Default.defaultADGroup;
+            setGroup(Properties.Settings.Default.defaultADGroup);
+            comboBox1.Text = this.MyGroupName;
             timer1.Enabled = true;
             updateList();
         }
@@ -132,8 +147,18 @@ namespace AD_GroupAdd
                     else
                     {
                         PrincipalSearchResult<Principal> users = group.GetMembers(false);
+
+                        //deep copy all the selected items in the listbox
+                        List<string> x = new List<string>(listBox1.Items.Count);
+                        foreach (Principal item in listBox1.SelectedItems)
+                        {                            
+                            x.Add(item.SamAccountName);
+                        }
+
+                        
                         listBox1.SuspendLayout();
-                        int sel = listBox1.SelectedIndex;
+
+                        //int sel = listBox1.SelectedIndex;
                         listBox1.Items.Clear();
                         foreach (Principal v in users)
                         {
@@ -141,20 +166,36 @@ namespace AD_GroupAdd
                             //if (listBox1.Items.Contains(v)) continue;
                             listBox1.Items.Add(v);
                         }
-                        if (sel <= (listBox1.Items.Count-1))
-                            listBox1.SelectedIndex = sel;
-                        else
-                            listBox1.SelectedIndex = listBox1.Items.Count-1;
+
+
+                        foreach (string item in x)
+                        {
+                            int tmp = FindSamName(listBox1.Items, item);
+                            if (tmp !=-1)
+                            {
+                                listBox1.SetSelected(tmp, true);
+                            }
+                        }
+                        x.Clear();
                         listBox1.ResumeLayout();
 
                     }
                 }
             }
         }
-
+        private static int FindSamName(ListBox.ObjectCollection lst,string samName)
+        {
+            for (int i = 0; i < lst.Count; i++)
+            {
+                if ((lst[i] as Principal).SamAccountName == samName)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
         private void timer1_Tick(object sender, EventArgs e)
         {
-            if (comboBox1.Focused) return;
             updateList();
         }
 
@@ -177,12 +218,11 @@ namespace AD_GroupAdd
 
         private void removeSelected()
         {
-            if (listBox1.SelectedIndex == -1)
+            foreach (var item in listBox1.SelectedItems)
             {
-                MessageBox.Show("select a user to remove");
-                return;
+                RemoveUserFromGroup(MyDomain, (item as Principal).SamAccountName, this.MyGroupName);
             }
-            RemoveUserFromGroup(MyDomain, (listBox1.SelectedItem as Principal).SamAccountName, this.MyGroupName);
+            
         }
 
 
@@ -191,6 +231,7 @@ namespace AD_GroupAdd
 
         private bool GroupExists(string domainName, string groupName)
         {
+            if (groupName == "") return false;
             using (var context = new PrincipalContext(ContextType.Domain, domainName))
             {
                 using (var group = GroupPrincipal.FindByIdentity(context, groupName))
@@ -235,6 +276,8 @@ namespace AD_GroupAdd
                 e.SuppressKeyPress = true;
             }
         }
+
+
     }
 }
     
