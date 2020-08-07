@@ -15,10 +15,11 @@ namespace AD_GroupAdd
     public partial class Form1 : Form
     {
         string MyDomain;
+        string MyGroupName;
         public Form1()
         {
             InitializeComponent();
-            MyDomain = "UMDAR.umassd.edu";
+            MyDomain = Properties.Settings.Default.defaultDomain;                ;
             timer1.Interval = 1000;
             
         }
@@ -28,8 +29,26 @@ namespace AD_GroupAdd
             txtUserName.Focus();
         }
 
+        private void comboBox1_KeyDown(object sender, KeyEventArgs e)
+        {
+
+            if (e.KeyCode == Keys.Enter)
+            {
+                if (GroupExists(this.MyDomain, comboBox1.Text))
+                {
+                    this.MyGroupName = comboBox1.Text;
+                    txtUserName.Focus();
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+            }
+        }
+
+
         private void Form1_Load(object sender, EventArgs e)
         {
+            this.MyGroupName = Properties.Settings.Default.defaultADGroup;
+            comboBox1.Text= Properties.Settings.Default.defaultADGroup;
             timer1.Enabled = true;
             updateList();
         }
@@ -37,27 +56,12 @@ namespace AD_GroupAdd
 
         public void updateList()
         {
-            if (comboBox1.Text == "") return;
-            PopulateUsers(this.MyDomain, comboBox1.Text);
-            
+            PopulateUsers();            
         }
-        /*
+       
 
-        //https://stackoverflow.com/questions/7915145/get-all-users-from-a-group-in-active-directory
-        public static SearchResultCollection GetListOfAdUsersByGroup(string domainName, string groupName)
-        {
-            DirectoryEntry entry = new DirectoryEntry("LDAP://UMDAR.umassd.edu");
-            DirectorySearcher search = new DirectorySearcher(entry);
-            string query = "(&(objectCategory=person)(objectClass=user)(memberOf=\"ii-214-users\"))";
-            search.Filter = query;
-            search.PropertiesToLoad.Add("memberOf");
-            search.PropertiesToLoad.Add("name");
-
-            return search.FindAll();
-        }
-        */
         //https://stackoverflow.com/questions/2143052/adding-and-removing-users-from-active-directory-groups-in-net#2143742
-        public void AddUserToGroup(string domainName, string userId, string groupName)
+        private void AddUserToGroup(string domainName, string userId, string groupName)
         {
             try
             {
@@ -70,17 +74,16 @@ namespace AD_GroupAdd
             }
             catch (UnauthorizedAccessException e)
             {
-                MessageBox.Show("Im sorry dave im afaid you cant do that",e.Message);
+                MessageBox.Show(Properties.Resources.ErrorMsg,e.Message);
             }
             catch (System.DirectoryServices.DirectoryServicesCOMException E)
             {
-                //doSomething with E.Message.ToString(); 
-                MessageBox.Show("Im sorry dave im afaid you cant do that", E.Message);
+                MessageBox.Show(Properties.Resources.ErrorMsg, E.Message);
 
             }
         }
 
-        public void RemoveUserFromGroup(string domainName, string userId, string groupName)
+        private void RemoveUserFromGroup(string domainName, string userId, string groupName)
         {
             if (userId=="")
             {
@@ -97,20 +100,19 @@ namespace AD_GroupAdd
             }
             catch (UnauthorizedAccessException e)
             {
-                MessageBox.Show("Im sorry dave im afaid you cant do that", e.Message);
+                MessageBox.Show(Properties.Resources.ErrorMsg, e.Message);
             }
             catch (System.DirectoryServices.DirectoryServicesCOMException E)
             {
-                //doSomething with E.Message.ToString(); 
-
+                MessageBox.Show(Properties.Resources.ErrorMsg, E.Message);
             }
         }
 
-        public void PopulateUsers(string domainName, string groupName)
+        public void PopulateUsers()
         {
-            using (var context = new PrincipalContext(ContextType.Domain, domainName))
+            using (var context = new PrincipalContext(ContextType.Domain, this.MyDomain))
             {
-                using (var group = GroupPrincipal.FindByIdentity(context, groupName))
+                using (var group = GroupPrincipal.FindByIdentity(context, this.MyGroupName))
                 {
                     
                     if (group == null)
@@ -131,7 +133,10 @@ namespace AD_GroupAdd
                             //if (listBox1.Items.Contains(v)) continue;
                             listBox1.Items.Add(v);
                         }
-                        listBox1.SelectedIndex = sel;
+                        if (sel <= (listBox1.Items.Count-1))
+                            listBox1.SelectedIndex = sel;
+                        else
+                            listBox1.SelectedIndex = listBox1.Items.Count-1;
                         listBox1.ResumeLayout();
 
                     }
@@ -152,28 +157,48 @@ namespace AD_GroupAdd
                 MessageBox.Show("Blank username?");
                 return;
             }
-            AddUserToGroup(MyDomain, txtUserName.Text, comboBox1.Text);
+            AddUserToGroup(MyDomain, txtUserName.Text, this.MyGroupName);
             txtUserName.Text = "";
         }
 
         private void btnRemove_Click(object sender, EventArgs e)
         {
-            if (listBox1.SelectedIndex==-1)
+            removeSelected();
+
+        }
+
+        private void removeSelected()
+        {
+            if (listBox1.SelectedIndex == -1)
             {
                 MessageBox.Show("select a user to remove");
                 return;
             }
-            RemoveUserFromGroup(MyDomain, (listBox1.SelectedItem as Principal).SamAccountName, comboBox1.Text);
-
+            RemoveUserFromGroup(MyDomain, (listBox1.SelectedItem as Principal).SamAccountName, this.MyGroupName);
         }
 
-        private void comboBox1_KeyDown(object sender, KeyEventArgs e)
+
+        
+
+
+        private bool GroupExists(string domainName, string groupName)
         {
-            
-            if (e.KeyCode == Keys.Enter)
+            using (var context = new PrincipalContext(ContextType.Domain, domainName))
             {
-                //todo: check if group exists
+                using (var group = GroupPrincipal.FindByIdentity(context, groupName))
+                {
+
+                    if (group == null)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
             }
+
         }
 
         private void txtUserName_KeyDown(object sender, KeyEventArgs e)
@@ -187,6 +212,19 @@ namespace AD_GroupAdd
                 }
                 AddUserToGroup(MyDomain, txtUserName.Text, comboBox1.Text);
                 txtUserName.Text = "";
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+
+            }
+        }
+
+        private void listBox1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode==Keys.Delete)
+            {
+                removeSelected();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
             }
         }
     }

@@ -1,7 +1,12 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)">
-  <Profiles>
-    <Profile Name="(Default)" />
-  </Profiles>
-  <Settings />
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="AD_GroupAdd.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="defaultADGroup" Type="System.String" Scope="User">
+      <Value Profile="(Default)">SENG-214-users</Value>
+    </Setting>
+    <Setting Name="defaultDomain" Type="System.String" Scope="User">
+      <Value Profile="(Default)">UMDAR.umassd.edu</Value>
+    </Setting>
+  </Settings>
 </SettingsFile>
