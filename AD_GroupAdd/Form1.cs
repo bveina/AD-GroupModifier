@@ -20,7 +20,7 @@ namespace AD_GroupAdd
         {
             InitializeComponent();
             MyDomain = Properties.Settings.Default.defaultDomain;
-            timer1.Interval = 5000;
+            timer1.Interval = 1000;
             
         }
 
@@ -34,7 +34,7 @@ namespace AD_GroupAdd
 
             if (e.KeyCode == Keys.Enter)
             {
-                if (setGroup(comboBox1.Text))
+                if (trySetGroup(comboBox1.Text))
                 {
                     e.Handled = true;
                     e.SuppressKeyPress = true;
@@ -43,10 +43,10 @@ namespace AD_GroupAdd
         }
         private void comboBox1_Leave(object sender, EventArgs e)
         {
-            setGroup(comboBox1.Text);
+            trySetGroup(comboBox1.Text);
         }
 
-        private bool setGroup(string grp)
+        private bool trySetGroup(string grp)
         {
             if (GroupExists(this.MyDomain, grp))
             {
@@ -62,18 +62,15 @@ namespace AD_GroupAdd
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            setGroup(Properties.Settings.Default.defaultADGroup);
+            
             comboBox1.Text = this.MyGroupName;
             timer1.Enabled = true;
-            updateList();
+            if (trySetGroup(Properties.Settings.Default.defaultADGroup))
+            {
+                PopulateUsers();
+            }
+            
         }
-
-
-        public void updateList()
-        {
-            PopulateUsers();            
-        }
-       
 
         //https://stackoverflow.com/questions/2143052/adding-and-removing-users-from-active-directory-groups-in-net#2143742
         private void AddUserToGroup(string domainName, string userId, string groupName)
@@ -146,6 +143,8 @@ namespace AD_GroupAdd
                     }
                     else
                     {
+                        //false - dont expand groups
+                        //true - expand groups
                         PrincipalSearchResult<Principal> users = group.GetMembers(false);
 
                         //deep copy all the selected items in the listbox
@@ -155,30 +154,25 @@ namespace AD_GroupAdd
                             x.Add(item.SamAccountName);
                         }
 
-                        
+                        //repopulate the list box with the most recent userList
                         listBox1.SuspendLayout();
-
-                        //int sel = listBox1.SelectedIndex;
                         listBox1.Items.Clear();
                         foreach (Principal v in users)
                         {
-                            //if (v.Name.Contains("ECE-")) continue;
-                            //if (listBox1.Items.Contains(v)) continue;
                             listBox1.Items.Add(v);
                         }
 
-
+                        // reselect previously selected users
                         foreach (string item in x)
                         {
                             int tmp = FindSamName(listBox1.Items, item);
-                            if (tmp !=-1)
+                            if (tmp !=-1) // if the item is found in the listbox
                             {
                                 listBox1.SetSelected(tmp, true);
                             }
                         }
-                        x.Clear();
+                        x.Clear(); // done with the temporary storage
                         listBox1.ResumeLayout();
-
                     }
                 }
             }
@@ -196,7 +190,7 @@ namespace AD_GroupAdd
         }
         private void timer1_Tick(object sender, EventArgs e)
         {
-            updateList();
+            PopulateUsers();
         }
 
         private void btnAdd_Click(object sender, EventArgs e)
