@@ -171,6 +171,8 @@ namespace AD_GroupAdd
                                 listBox1.SetSelected(tmp, true);
                             }
                         }
+                        toolStripStatusLabel2.Text = String.Format("Count: {0}", listBox1.Items.Count);
+                            
                         x.Clear(); // done with the temporary storage
                         listBox1.ResumeLayout();
                     }
